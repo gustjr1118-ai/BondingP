@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { AUTH_COOKIE, verifySession } from "@/lib/auth";
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   const cookieStore = await cookies();
   const authenticated = await verifySession(cookieStore.get(AUTH_COOKIE)?.value, process.env.SESSION_SECRET);
   if (!authenticated) return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json({ error: "AI 연결 설정이 필요합니다." }, { status: 503 });
   }
 
@@ -28,24 +28,21 @@ export async function POST(request: Request) {
   }
 
   try {
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 25_000, maxRetries: 1 });
-    const response = await client.responses.create({
-      model: process.env.OPENAI_MODEL || "gpt-5.4-mini",
-      instructions: TRANSFORM_INSTRUCTIONS,
-      input: buildModelInput(parsed.data.request, parsed.data.questions, parsed.data.answers),
-      reasoning: { effort: "low" },
-      max_output_tokens: 2_500,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "prompt_six_result",
-          strict: true,
-          schema: MODEL_OUTPUT_JSON_SCHEMA,
-        },
+    const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const response = await client.models.generateContent({
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash-lite",
+      contents: buildModelInput(parsed.data.request, parsed.data.questions, parsed.data.answers),
+      config: {
+        systemInstruction: TRANSFORM_INSTRUCTIONS,
+        maxOutputTokens: 2_500,
+        responseMimeType: "application/json",
+        responseJsonSchema: MODEL_OUTPUT_JSON_SCHEMA,
+        httpOptions: { timeout: 25_000 },
       },
     });
 
-    const result = modelOutputSchema.parse(JSON.parse(response.output_text));
+    if (!response.text) throw new Error("Gemini returned an empty response");
+    const result = modelOutputSchema.parse(JSON.parse(response.text));
     if (parsed.data.answers.length > 0 && result.status !== "completed") {
       throw new Error("Model requested a second clarification round");
     }

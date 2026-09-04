@@ -6,14 +6,14 @@
 
 - 입력 언어를 유지하는 6요소 프롬프트 생성
 - 필요한 경우 1~3개의 추가 질문
-- OpenAI Structured Outputs 기반 응답 검증
+- Gemini Structured Outputs 기반 응답 검증
 - 공유 암호와 서명된 보안 쿠키
 - 대화 및 사용자 데이터 미저장
 - 반응형 결과 카드와 전체 복사
 
 ## 로컬 실행
 
-Node.js 20 이상과 OpenAI API 키가 필요합니다.
+Node.js 20 이상과 Google AI Studio에서 발급한 Gemini API 키가 필요합니다.
 
 ```bash
 pnpm install
@@ -31,8 +31,8 @@ Copy-Item .env.example .env.local
 
 | 환경변수 | 용도 |
 | --- | --- |
-| `OPENAI_API_KEY` | 서버에서만 사용하는 OpenAI API 키 |
-| `OPENAI_MODEL` | 사용할 모델, 기본값 `gpt-5.4-mini` |
+| `GEMINI_API_KEY` | 서버에서만 사용하는 Gemini API 키 |
+| `GEMINI_MODEL` | 사용할 모델, 기본값 `gemini-2.5-flash-lite` |
 | `APP_PASSWORD` | 방문자와 공유할 앱 암호 |
 | `SESSION_SECRET` | 쿠키 서명용 32자 이상의 임의 문자열 |
 
@@ -56,4 +56,4 @@ API 키와 공유 암호는 `NEXT_PUBLIC_` 접두사를 붙이지 마세요. 그
 
 ## 데이터 처리
 
-앱은 데이터베이스를 사용하지 않습니다. 요청과 답변은 프롬프트 생성 중 OpenAI API로 전달되며 앱 서버에는 별도로 저장하지 않습니다. 운영 환경의 플랫폼 로그 정책은 Vercel과 OpenAI 계정 설정에서 별도로 확인하세요.
+앱은 데이터베이스를 사용하지 않습니다. 요청과 답변은 프롬프트 생성 중 Gemini API로 전달되며 앱 서버에는 별도로 저장하지 않습니다. 무료 티어 입력은 Google의 제품 개선에 사용될 수 있습니다. 운영 환경의 플랫폼 로그 정책은 Vercel과 Google 계정 설정에서 별도로 확인하세요.
