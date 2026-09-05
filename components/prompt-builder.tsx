@@ -1,21 +1,14 @@
 "use client";
 
 import { FormEvent, KeyboardEvent, useMemo, useState } from "react";
-import type { CompletedResult, TransformResponse } from "@/lib/contracts";
-import { MAX_ANSWER_LENGTH, MAX_REQUEST_LENGTH } from "@/lib/contracts";
+import type { CompletedResult, TransformResponse, WorkMode } from "@/lib/contracts";
+import { frameworks, MAX_ANSWER_LENGTH, MAX_REQUEST_LENGTH } from "@/lib/contracts";
+import { previewResult } from "@/lib/preview";
 
 type Stage = "input" | "clarification" | "complete";
 
-const fieldMeta: Array<{ key: keyof Omit<CompletedResult, "status" | "questions" | "finalPrompt">; number: string; title: string; english: string; hint: string }> = [
-  { key: "role", number: "01", title: "역할", english: "Role", hint: "전문 분야 · 책임 범위" },
-  { key: "task", number: "02", title: "작업", english: "Task", hint: "목표 · 수행 항목 · 산출물" },
-  { key: "context", number: "03", title: "상황", english: "Context", hint: "입력값 · 단위 · 공정 조건" },
-  { key: "constraints", number: "04", title: "제약 및 접근 방식", english: "Constraints", hint: "공차 · 검증 · 예외 처리" },
-  { key: "outputFormat", number: "05", title: "출력 형식", english: "Output", hint: "표 · 수식 · 체크리스트" },
-  { key: "stopCondition", number: "06", title: "완료 조건", english: "Done", hint: "판정 기준 · 제외 범위" },
-];
-
 export default function PromptBuilder() {
+  const [mode, setMode] = useState<WorkMode>("general");
   const [stage, setStage] = useState<Stage>("input");
   const [request, setRequest] = useState("");
   const [questions, setQuestions] = useState<string[]>([]);
@@ -23,18 +16,19 @@ export default function PromptBuilder() {
   const [result, setResult] = useState<CompletedResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"ko" | "en" | null>(null);
 
   const requestCount = useMemo(() => request.length.toLocaleString("ko-KR"), [request.length]);
 
   async function transform(payload: { request: string; questions?: string[]; answers?: string[] }) {
+    if (loading) return;
     setLoading(true);
     setError("");
     try {
       const response = await fetch("/api/transform", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, mode }),
       });
       if (response.status === 401) {
         window.location.href = "/login";
@@ -64,7 +58,7 @@ export default function PromptBuilder() {
   }
 
   function handleRequestShortcut(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && !loading && request.trim()) {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && !loading && stage !== "clarification" && request.trim()) {
       event.preventDefault();
       void transform({ request: request.trim() });
     }
@@ -93,14 +87,27 @@ export default function PromptBuilder() {
     setAnswers([]);
     setResult(null);
     setError("");
-    setCopied(false);
+    setCopied(null);
   }
 
-  async function copyPrompt() {
+  function clearOutput() {
+    setStage("input");
+    setQuestions([]);
+    setAnswers([]);
+    setResult(null);
+    setCopied(null);
+    setError("");
+  }
+
+  async function copyPrompt(language: "ko" | "en") {
     if (!result) return;
-    await navigator.clipboard.writeText(result.finalPrompt);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
+    try {
+      await navigator.clipboard.writeText(result[language].finalPrompt);
+      setCopied(language);
+      window.setTimeout(() => setCopied(null), 1800);
+    } catch {
+      setError("복사하지 못했어요. 결과 텍스트를 선택해서 복사해 주세요.");
+    }
   }
 
   async function logout() {
@@ -111,28 +118,29 @@ export default function PromptBuilder() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <button className="brand" onClick={reset} aria-label="처음으로">
+        <button className="brand" onClick={reset} disabled={loading} aria-label="처음으로">
           <span className="brand-symbol">P</span><span>Prompt Six</span>
         </button>
-        <div className="topbar-actions"><span className="security-status"><i /> 안전하게 보호됨</span><button className="ghost-button" onClick={logout}>로그아웃</button></div>
+        <div className="topbar-actions"><span className="creator-credit"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg>제작자: hyunseok.ko</span><button className="ghost-button" onClick={logout}>로그아웃</button></div>
       </header>
 
       <div className="page-container">
         <section className="hero">
           <span className="product-badge">AI PROMPT WORKSPACE</span>
-          <h1>요청을 입력하면,<br /><strong>실행 가능한 프롬프트</strong>로 정리해드려요.</h1>
-          <p>일반 업무부터 디스플레이·설계·공정 계산까지<br className="desktop-break" /> 필요한 조건과 검증 기준을 빠짐없이 구조화합니다.</p>
+          <h1>업무용 <strong>프롬프트 생성기</strong></h1>
+          <p>업무에 맞게 구조화하고, 한글과 영어로 한 번에 완성하세요.</p>
         </section>
 
         <section className="workspace" aria-live="polite">
-        {stage === "input" && (
           <form onSubmit={submitRequest} className="composer">
+            <div className="mode-picker"><label htmlFor="work-mode">업무 유형</label><select id="work-mode" value={mode} disabled={loading} onChange={(event) => { setMode(event.target.value as WorkMode); clearOutput(); }}><option value="general">일반 업무</option><option value="bonding">Bonding 업무</option></select><span>{mode === "general" ? "일상 업무를 명확하게 · 6개 구조" : "Flexible OLED Module 전문 · 7개 구조"}</span></div>
             <div className="composer-title"><div><span className="step-dot">1</span><div><label htmlFor="request">어떤 작업이 필요한가요?</label><p>평소 말하듯 입력해도 괜찮아요.</p></div></div><span className="shortcut-chip">Ctrl + Enter</span></div>
             <textarea
               id="request"
               value={request}
-              onChange={(event) => setRequest(event.target.value)}
-              placeholder="예: 압착부 접속 면적과 절연 갭을 입력값에 따라 자동 계산하고, 결과와 검증 기준을 표로 보여주는 도구를 만들고 싶어."
+              onChange={(event) => { setRequest(event.target.value); clearOutput(); }}
+              disabled={loading}
+              placeholder={mode === "general" ? "예: 팀장에게 보고할 주간 업무 보고서 초안을 작성하고 싶어. 완료 업무, 진행 상황, 다음 주 계획을 표로 정리해줘." : "예: Flexible OLED OLB 공정에서 발생하는 Open 불량의 원인과 검증 계획을 정리하고 싶어. ACF, 얼라인먼트, 압착 조건별로 가설과 필요한 측정 항목을 구분해줘."}
               maxLength={MAX_REQUEST_LENGTH}
               rows={6}
               autoFocus
@@ -140,12 +148,12 @@ export default function PromptBuilder() {
             />
             <div className="composer-footer">
               <span><b>{requestCount}</b> / {MAX_REQUEST_LENGTH.toLocaleString("ko-KR")}자</span>
-              <button type="submit" disabled={loading || !request.trim()}>
+              <button type="submit" disabled={loading || !request.trim() || stage === "clarification"}>
                 {loading ? "요청을 분석하고 있어요" : "프롬프트 만들기"}<span aria-hidden="true">→</span>
               </button>
             </div>
+            {process.env.NODE_ENV === "development" && <div className="local-preview"><span>로컬 UI 확인용 · 실제 AI 생성 결과가 아닌 예시입니다.</span><button type="button" className="ghost-button" disabled={loading} onClick={() => { clearOutput(); setResult(previewResult(mode)); setStage("complete"); }}>예시 결과 미리보기</button></div>}
           </form>
-        )}
 
         {stage === "clarification" && (
           <form onSubmit={submitAnswers} className="clarification-card">
@@ -163,13 +171,14 @@ export default function PromptBuilder() {
                     placeholder="편하게 답해주세요"
                     maxLength={MAX_ANSWER_LENGTH}
                     rows={3}
+                    disabled={loading}
                     onKeyDown={handleAnswerShortcut}
                   />
                 </label>
               ))}
             </div>
             <div className="actions">
-              <button type="button" className="secondary-button" onClick={reset}>처음으로</button>
+              <button type="button" className="secondary-button" disabled={loading} onClick={reset}>처음으로</button>
               <button type="submit" disabled={loading}>{loading ? "프롬프트를 완성하고 있어요" : "답변 반영하기 →"}</button>
             </div>
           </form>
@@ -178,27 +187,25 @@ export default function PromptBuilder() {
         {stage === "complete" && result && (
           <div className="result-wrap" id="result">
             <div className="result-heading">
-              <div><span className="completion-icon">✓</span><div><p>구조화 완료</p><h2>바로 사용할 수 있는 프롬프트예요</h2></div></div>
-              <button onClick={copyPrompt}>{copied ? "복사 완료 ✓" : "전체 복사"}</button>
+              <div><span className="completion-icon">✓</span><div><p>{result.mode === "general" ? "일반 업무 · 6개 구조" : "Bonding 업무 · 7개 구조"}</p><h2>한글·영문 프롬프트</h2></div></div>
             </div>
-            <div className="result-grid">
-              {fieldMeta.map((field) => (
-                <article className="result-card" key={field.key}>
-                  <div className="result-card-head"><span className="result-index">{field.number}</span><div><p className="result-label">{field.title} <span>{field.english}</span></p><small>{field.hint}</small></div></div>
-                  <p className="result-content">{result[field.key]}</p>
-                </article>
+            <div className="bilingual-grid">
+              {(["ko", "en"] as const).map((language) => (
+                <section className="language-column" lang={language} key={language} aria-label={language === "ko" ? "한글 프롬프트" : "English prompt"}>
+                  <div className="language-heading"><h3>{language === "ko" ? "한글 버전" : "English version"}</h3><button className="secondary-button" onClick={() => copyPrompt(language)}>{copied === language ? "복사 완료 ✓" : language === "ko" ? "한글 복사" : "Copy English"}</button></div>
+                  {result[language].sections.map((content, index) => <article className="result-card" key={index}><div className="result-card-head"><span className="result-index">{String(index + 1).padStart(2, "0")}</span><h4 className="result-label">{frameworks[result.mode][index][language === "ko" ? 0 : 1]}</h4></div><p className="result-content">{content}</p></article>)}
+                </section>
               ))}
             </div>
             <div className="result-actions">
-              <button className="secondary-button" onClick={reset}>새 프롬프트 만들기</button>
-              <button onClick={copyPrompt}>{copied ? "복사 완료 ✓" : "프롬프트 전체 복사"}</button>
+              <button className="secondary-button" disabled={loading} onClick={reset}>새 프롬프트 만들기</button>
             </div>
           </div>
         )}
 
         {error && <div className="error-banner" role="alert">{error}</div>}
         </section>
-        {stage !== "complete" && <section className="framework-preview"><div><span>6</span><p><b>핵심 요소로 구조화</b><small>역할부터 완료 조건까지</small></p></div>{fieldMeta.map((field) => <span key={field.key}>{field.number} {field.title}</span>)}</section>}
+        {stage !== "complete" && <section className="framework-preview"><div><span>{frameworks[mode].length}</span><p><b>선택한 프롬프트 구조</b><small>한글·영문 동시 생성</small></p></div>{frameworks[mode].map((field, index) => <span key={field[0]}>{String(index + 1).padStart(2, "0")} {field[0]}</span>)}</section>}
       </div>
       <footer className="app-footer">Prompt Six · Gemini 기반 프롬프트 워크스페이스</footer>
     </main>
