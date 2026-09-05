@@ -4,6 +4,7 @@ import { FormEvent, KeyboardEvent, useMemo, useState } from "react";
 import type { CompletedResult, TransformResponse, WorkMode } from "@/lib/contracts";
 import { frameworks, MAX_ANSWER_LENGTH, MAX_REQUEST_LENGTH } from "@/lib/contracts";
 import { previewResult } from "@/lib/preview";
+import { PrivacyNotice, ProtectionBadge } from "@/components/privacy-notice";
 
 type Stage = "input" | "clarification" | "complete";
 
@@ -121,6 +122,7 @@ export default function PromptBuilder() {
         <button className="brand" onClick={reset} disabled={loading} aria-label="처음으로">
           <span className="brand-symbol">P</span><span>Prompt Six</span>
         </button>
+        <ProtectionBadge />
         <div className="topbar-actions"><span className="creator-credit"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg>제작자: hyunseok.ko</span><button className="ghost-button" onClick={logout}>로그아웃</button></div>
       </header>
 
@@ -152,6 +154,7 @@ export default function PromptBuilder() {
                 {loading ? "요청을 분석하고 있어요" : "프롬프트 만들기"}<span aria-hidden="true">→</span>
               </button>
             </div>
+            <PrivacyNotice />
             {process.env.NODE_ENV === "development" && <div className="local-preview"><span>로컬 UI 확인용 · 실제 AI 생성 결과가 아닌 예시입니다.</span><button type="button" className="ghost-button" disabled={loading} onClick={() => { clearOutput(); setResult(previewResult(mode)); setStage("complete"); }}>예시 결과 미리보기</button></div>}
           </form>
 

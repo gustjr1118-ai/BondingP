@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PrivacyNotice, ProtectionBadge } from "@/components/privacy-notice";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -57,7 +58,8 @@ export default function LoginPage() {
             {loading ? "확인 중…" : "시작하기"}
           </button>
         </form>
-        <p className="privacy-note"><span aria-hidden="true">●</span> 입력한 대화 내용은 별도로 저장하지 않아요.</p>
+        <div className="login-protection"><ProtectionBadge /></div>
+        <PrivacyNotice />
       </section>
     </main>
   );
