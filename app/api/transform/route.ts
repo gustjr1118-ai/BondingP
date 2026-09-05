@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   try {
     const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await client.models.generateContent({
-      model: process.env.GEMINI_MODEL || "gemini-2.5-flash-lite",
+      model: process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
       contents: buildModelInput(parsed.data.request, parsed.data.questions, parsed.data.answers),
       config: {
         systemInstruction: TRANSFORM_INSTRUCTIONS,

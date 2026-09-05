@@ -32,7 +32,7 @@ Copy-Item .env.example .env.local
 | 환경변수 | 용도 |
 | --- | --- |
 | `GEMINI_API_KEY` | 서버에서만 사용하는 Gemini API 키 |
-| `GEMINI_MODEL` | 사용할 모델, 기본값 `gemini-2.5-flash-lite` |
+| `GEMINI_MODEL` | 사용할 모델, 기본값 `gemini-3.5-flash-lite` |
 | `APP_PASSWORD` | 방문자와 공유할 앱 암호 |
 | `SESSION_SECRET` | 쿠키 서명용 32자 이상의 임의 문자열 |
 
