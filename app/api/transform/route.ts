@@ -52,11 +52,17 @@ export async function POST(request: Request) {
     const status = typeof details.status === "number" ? details.status : undefined;
     const code = typeof details.code === "string" ? details.code : undefined;
     const name = error instanceof Error ? error.name : "UnknownError";
+    const message = error instanceof Error
+      ? error.message
+          .replace(/AQ\.[A-Za-z0-9._-]+/g, "[REDACTED_API_KEY]")
+          .replace(/AIza[A-Za-z0-9_-]+/g, "[REDACTED_API_KEY]")
+          .slice(0, 500)
+      : undefined;
 
     // Do not log request text, API keys, or provider messages because they can
     // contain user data. These fields are enough to distinguish auth, quota,
     // timeout, and local validation failures in Vercel logs.
-    console.error("Gemini transform failed", { name, status, code });
+    console.error("Gemini transform failed", { name, status, code, message });
     return NextResponse.json(
       { error: "프롬프트를 만드는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요." },
       { status: 502 },
