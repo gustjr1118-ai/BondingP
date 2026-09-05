@@ -35,10 +35,10 @@ export default function LoginPage() {
   return (
     <main className="login-shell">
       <section className="login-card">
-        <div className="brand-mark" aria-hidden="true">✦</div>
-        <p className="eyebrow">PROMPT SIX</p>
-        <h1>좋은 질문의 시작</h1>
-        <p className="muted">공유받은 암호를 입력하면 프롬프트 빌더를 사용할 수 있어요.</p>
+        <div className="login-brand"><span className="brand-symbol">P</span><span>Prompt Six</span></div>
+        <span className="login-badge">PRIVATE WORKSPACE</span>
+        <h1>프롬프트 작업공간에<br />접속하세요.</h1>
+        <p className="muted">공유 암호를 입력하면 안전하게 시작할 수 있어요.</p>
         <form onSubmit={submit} className="login-form">
           <label htmlFor="password">공유 암호</label>
           <input
@@ -50,12 +50,14 @@ export default function LoginPage() {
             maxLength={200}
             required
             autoFocus
+            placeholder="암호를 입력해 주세요"
           />
           {error && <p className="form-error" role="alert">{error}</p>}
           <button type="submit" disabled={loading || !password}>
             {loading ? "확인 중…" : "시작하기"}
           </button>
         </form>
+        <p className="privacy-note"><span aria-hidden="true">●</span> 입력한 대화 내용은 별도로 저장하지 않아요.</p>
       </section>
     </main>
   );
