@@ -47,7 +47,16 @@ export async function POST(request: Request) {
       throw new Error("Model requested a second clarification round");
     }
     return NextResponse.json(normalizeModelOutput(result));
-  } catch {
+  } catch (error) {
+    const details = error && typeof error === "object" ? error as Record<string, unknown> : {};
+    const status = typeof details.status === "number" ? details.status : undefined;
+    const code = typeof details.code === "string" ? details.code : undefined;
+    const name = error instanceof Error ? error.name : "UnknownError";
+
+    // Do not log request text, API keys, or provider messages because they can
+    // contain user data. These fields are enough to distinguish auth, quota,
+    // timeout, and local validation failures in Vercel logs.
+    console.error("Gemini transform failed", { name, status, code });
     return NextResponse.json(
       { error: "프롬프트를 만드는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요." },
       { status: 502 },
