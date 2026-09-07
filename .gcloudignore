@@ -1,0 +1,17 @@
+**
+!Dockerfile
+!.dockerignore
+!.gcloudignore
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!next.config.ts
+!next-env.d.ts
+!tsconfig.json
+!.eslintrc.json
+!app/
+!app/**
+!components/
+!components/**
+!lib/
+!lib/**
