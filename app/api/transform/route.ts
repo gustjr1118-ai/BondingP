@@ -55,10 +55,17 @@ export async function POST(request: Request) {
 
     // Do not log request text, API keys, or provider messages because they can
     // contain user data. These fields are enough to distinguish auth, quota,
-    // timeout, and local validation failures in Vercel logs.
+    // timeout, and local validation failures in provider logs.
     console.error("Gemini transform failed", { name, status, code });
+    const providerError = status === 401 || status === 403
+      ? "Gemini API 키 권한을 확인해 주세요."
+      : status === 404
+        ? "Gemini 모델 설정을 확인해 주세요."
+        : status === 429
+          ? "Gemini 무료 사용량 또는 요청 한도를 확인해 주세요."
+          : "프롬프트를 만드는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.";
     return NextResponse.json(
-      { error: "프롬프트를 만드는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요." },
+      { error: providerError },
       { status: 502 },
     );
   }
